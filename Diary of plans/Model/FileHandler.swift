@@ -8,8 +8,13 @@
 import Foundation
 
 protocol FileHandlerProtocol {
-    func fetch(completion: @escaping (Result<Data, Error>) -> Void)
-    func write(_ data: Data, completion: @escaping (Result<Void, Error>) -> Void)
+    typealias FetchCompletion = (Result<Data, Error>) -> Void
+    typealias WriteCompletion = (Result<Void, Error>) -> Void
+    typealias Encoderesult = Result<Data, Error>
+    
+    func fetch(completion: @escaping FetchCompletion)
+    func write(_ data: Data, completion: @escaping WriteCompletion)
+    func encodeNotes(_ notes: [Note]) -> Encoderesult 
 }
 
 
@@ -27,7 +32,7 @@ class FileHandler: FileHandlerProtocol {
         }
     }
     
-    func fetch(completion: @escaping (Result<Data, any Error>) -> Void) {
+    func fetch(completion: @escaping FetchCompletion) {
         do {
            let data = try Data(contentsOf: url)
             completion(.success(data))
@@ -36,13 +41,26 @@ class FileHandler: FileHandlerProtocol {
         }
     }
     
-    func write(_ data: Data, completion: @escaping (Result<Void, any Error>) -> Void) {
+    func write(_ data: Data, completion: @escaping WriteCompletion) {
         do {
             try data.write(to: url)
             completion(.success(()))
         } catch {
             completion(.failure(error))
         }
+    }
+    
+    func encodeNotes(_ notes: [Note]) -> Encoderesult {
+        
+        let propertyListEncoder = PropertyListEncoder()
+        if let encodedList = try? propertyListEncoder.encode(notes) {
+            return .success(encodedList)
+        } else {
+            return.failure(NoteServiceError.fileWriteError("Не удалось закодировать массив заметок в тип Data"))
+        }
+        
+        
+        
     }
     
 }

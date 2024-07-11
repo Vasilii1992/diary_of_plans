@@ -8,20 +8,24 @@
 import Foundation
 
 protocol ServiceRepositoryProtocol {
-    func fetchNotes(completion: @escaping (Result<[Note], Error>) -> Void)
-    func saveData(note: Note, completion: @escaping (Result<Void, Error>) -> Void)
-    func removeData(note: Note, completion: @escaping (Result<Void, Error>) -> Void)
-    func updateNote(_ note: Note, completion: @escaping (Result<Void, Error>) -> Void)
+    typealias FetchNotesCompletion = (Result<[Note], Error>) -> Void
+    typealias OperationCompletion  = (Result<Void, Error>) -> Void
+    
+    
+    
+    func fetchNotes(completion: @escaping FetchNotesCompletion )
+    func saveData(note: Note, completion: @escaping OperationCompletion )
+    func removeData(note: Note, completion: @escaping OperationCompletion )
+    func updateNote(_ note: Note, completion: @escaping OperationCompletion )
 }
 
+enum NoteServiceError: Error {
+    case fileReadError(String)
+    case fileWriteError(String)
+    case noteNotFound(String)
+}
 
 final class ServiceRepository: ServiceRepositoryProtocol {
-    
-    enum NoteServiceError: Error {
-        case fileReadError(String)
-        case fileWriteError(String)
-        case noteNotFound(String)
-    }
     
     private let fileHandler: FileHandler
     
@@ -31,7 +35,7 @@ final class ServiceRepository: ServiceRepositoryProtocol {
         self.fileHandler = fileHandler
     }
     
-    func fetchNotes(completion: @escaping (Result<[Note], any Error>) -> Void) {
+    func fetchNotes(completion: @escaping FetchNotesCompletion) {
         !notesCach.isEmpty ? completion(.success(notesCach)) : nil
         
         fileHandler.fetch { result in
@@ -56,21 +60,19 @@ final class ServiceRepository: ServiceRepositoryProtocol {
         }
     }
     
-    func saveData(note: Note, completion: @escaping (Result<Void, any Error>) -> Void) {
+    func saveData(note: Note, completion: @escaping OperationCompletion) {
         notesCach.append(note)
-        let propertyListEncoder = PropertyListEncoder()
-        guard let encodedList = try? propertyListEncoder.encode(notesCach) else {
-            completion(.failure(NoteServiceError.fileWriteError("Не удалось закодировать массив заметок в директорию устройства")))
-            return
-        }
-        
-        fileHandler.write(encodedList) { result in
-            completion(result)
+        switch fileHandler.encodeNotes(notesCach) {
+            
+        case .success(let data):
+            fileHandler.write(data, completion: completion)
+        case .failure(let error):
+            completion(.failure(error))
         }
         
     }
     
-    func removeData(note: Note, completion: @escaping (Result<Void, any Error>) -> Void) {
+    func removeData(note: Note, completion: @escaping OperationCompletion) {
         guard let index = notesCach.firstIndex(where: { noteElement in
             noteElement == note
         }) else {
@@ -79,17 +81,16 @@ final class ServiceRepository: ServiceRepositoryProtocol {
         }
         notesCach.remove(at: index)
         
-        let propertyListEncoder = PropertyListEncoder()
-        guard let encoderList = try? propertyListEncoder.encode(notesCach) else {
-            completion(.failure(NoteServiceError.fileWriteError("Не удалось закодировать данные в массив")))
-            return
-        }
-        fileHandler.write(encoderList) { result in
-            completion(result)
+        switch fileHandler.encodeNotes(notesCach) {
+            
+        case .success(let data):
+            fileHandler.write(data, completion: completion)
+        case .failure(let error):
+            completion(.failure(error))
         }
     }
     
-    func updateNote(_ noteToUpdate: Note, completion: @escaping (Result<Void, any Error>) -> Void) {
+    func updateNote(_ noteToUpdate: Note, completion: @escaping OperationCompletion) {
      
         guard let index = notesCach.firstIndex(where: { noteElement in
             noteElement == noteToUpdate
@@ -99,14 +100,12 @@ final class ServiceRepository: ServiceRepositoryProtocol {
         }
         notesCach[index] = noteToUpdate
         
-        let propertyListEncoder = PropertyListEncoder()
-        guard let encoderList = try? propertyListEncoder.encode(notesCach) else {
-            completion(.failure(NoteServiceError.fileWriteError("Не удалось закодировать данные в массив")))
-            return
+        switch fileHandler.encodeNotes(notesCach) {
+            
+        case .success(let data):
+            fileHandler.write(data, completion: completion)
+        case .failure(let error):
+            completion(.failure(error))
         }
-        fileHandler.write(encoderList) { result in
-            completion(result)
-        }
-        
     }
 }
