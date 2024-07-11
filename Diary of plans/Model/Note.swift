@@ -22,9 +22,9 @@ struct Note: Codable, Identifiable, Equatable {
 
 
 /*
- Ты IOS разработчик.У нас есть часть кода для приложение Заметок. Нужно дописать код, отобразить таблицу на экране, сделать так чтобы в верхнем правом углу была кнопка для добавления заметки, и чтобы заметку можно было удалять из таблицы и помечать как завершенную (isComplete).
- 
- You are an iOS developer.We have a piece of code for the Notes app. You need to add the code, display the table on the screen, make sure that there is a button in the upper right corner to add a note, and that the note can be deleted from the table and marked as completed (isComplete).
+ Ты IOS разработчик.У нас приложение с заметками. Нам нужно сделать так чтобы при нажатии на ячейку у нас изменялось поле "isComplete" и в зависимости от того какое там значение, срабатывал метод "getImage" и изображение в ячейке менялось
+
+ You are an iOS developer.We have an application with notes. We need to make sure that when we click on a cell, the "isComplete" field changes and, depending on what value is there, the "getImage" method is triggered and the image in the cell changes
  
  Here is the code:
  
@@ -41,19 +41,226 @@ struct Note: Codable, Identifiable, Equatable {
      func didDeleteRow(at index: Int)
  }
 
+ class NoteViewController: UIViewController, NoteViewProtocol {
 
+     private var presenter: NotePresenterProtocol!
+     
+     private lazy var tableView: UITableView = {
+         let tableView = UITableView()
+             tableView.register(NoteTableViewCell.self, forCellReuseIdentifier: NoteTableViewCell.reuseIdentifier)
 
- class NoteViewController: UIViewController {
+         return tableView
+     }()
 
+     
      override func viewDidLoad() {
          super.viewDidLoad()
+         view.backgroundColor = .white
+         title = "Заметки"
+         setupViews()
+         setupConstraints()
+         setupDelegate()
+         setupPresenter()
+         presenter.loadAndUpdateDisplayData()
+         
+         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addNoteTapped))
+
+     }
+     
+     private func setupViews() {
+
+         view.addSubview(tableView)
+         
+     }
+     
+     func setupDelegate() {
+         tableView.dataSource = self
+         tableView.delegate = self
+     }
+     func setupConstraints() {
+         tableView.translatesAutoresizingMaskIntoConstraints = false
+         NSLayoutConstraint.activate([
+             tableView.topAnchor.constraint(equalTo: view.topAnchor),
+             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+         
+         ])
+     }
+
+     private func setupPresenter() {
+         let fileHandler = FileHandler()
+         let serviceRepository = ServiceRepository(fileHandler: fileHandler)
+         presenter = NotePresenter(view: self, dataRepository: serviceRepository)
+     }
+     
+     @objc private func addNoteTapped() {
+         let alertController = UIAlertController(title: "Новая Заметка", message: "Запиши свою заметку", preferredStyle: .alert)
+         
+         // Title field
+         alertController.addTextField { textField in
+             textField.placeholder = "Заголовок..."
+         }
+         
+         // Content field
+         alertController.addTextField { textField in
+             textField.placeholder = "Заметка..."
+         }
+         
+         let addAction = UIAlertAction(title: "Добавить", style: .default) { [weak self] _ in
+             guard let textFields = alertController.textFields,
+                   let titleField = textFields.first, let noteTitle = titleField.text, !noteTitle.isEmpty,
+                   let contentField = textFields.last, let noteContent = contentField.text, !noteContent.isEmpty else {
+                 self?.showError(title: "Error", message: "Both title and note cannot be empty")
+                 return
+             }
+             
+             let newNote = Note(title: noteTitle, isComplete: false, date: Date(), notes: noteContent)
+             self?.presenter.addNote(note: newNote)
+         }
+         
+         let cancelAction = UIAlertAction(title: "Отмена", style: .cancel, handler: nil)
+         
+         alertController.addAction(addAction)
+         alertController.addAction(cancelAction)
+         
+         present(alertController, animated: true, completion: nil)
      }
 
 
+     // MARK: - NoteViewProtocol Methods
+     func showError(title: String, message: String) {
+         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+         present(alert, animated: true, completion: nil)
+     }
+     
+     func showLoading() {
+         // Optionally implement loading indicator
+     }
+     
+     func hideLoading() {
+         // Optionally hide loading indicator
+     }
+     
+     func loadRow(at index: Int) {
+         tableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
+     }
+     
+     func reloadData() {
+         tableView.reloadData()
+     }
+     
+     func didInsertRow(at index: Int) {
+         tableView.insertRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
+     }
+     
+     func didDeleteRow(at index: Int) {
+         tableView.deleteRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
+     }
  }
- 
- 
- 
+
+ // MARK: - UITableViewDataSource Methods
+ extension NoteViewController: UITableViewDataSource {
+     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+         return presenter.numberOfNotes()
+     }
+
+     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+         guard let cell = tableView.dequeueReusableCell(withIdentifier: NoteTableViewCell.reuseIdentifier, for: indexPath) as? NoteTableViewCell else {
+             return UITableViewCell()
+         }
+         let note = presenter.noteAt(index: indexPath.row)
+         cell.configure(with: note)
+         cell.image.image = UIImage(systemName: presenter.getImage(for: false))
+         return cell
+     }
+
+ }
+
+ // MARK: - UITableViewDelegate Methods
+ extension NoteViewController: UITableViewDelegate {
+     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+         presenter.isToggleNote(for: indexPath.row)
+     }
+     
+     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+         if editingStyle == .delete {
+             presenter.deleteNote(at: indexPath.row)
+         }
+     }
+ }
+
+ class NoteTableViewCell: UITableViewCell {
+     static let reuseIdentifier = "NoteTableViewCell"
+
+     
+     private let titleLabel: UILabel = {
+         let label = UILabel()
+         label.font = UIFont.boldSystemFont(ofSize: 16)
+         label.translatesAutoresizingMaskIntoConstraints = false
+         return label
+     }()
+     
+     private let noteLabel: UILabel = {
+         let label = UILabel()
+         label.font = UIFont.systemFont(ofSize: 14)
+         label.numberOfLines = 0
+         label.translatesAutoresizingMaskIntoConstraints = false
+         return label
+     }()
+     
+      let image: UIImageView = {
+         let image = UIImageView()
+         image.tintColor = .systemBlue
+         image.translatesAutoresizingMaskIntoConstraints = false
+         image.heightAnchor.constraint(equalToConstant: 24).isActive = true
+         image.widthAnchor.constraint(equalToConstant: 24).isActive = true
+
+         return image
+     }()
+     
+     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+         super.init(style: style, reuseIdentifier: reuseIdentifier)
+         setupViews()
+         setupConstraints()
+     }
+     
+     required init?(coder: NSCoder) {
+         fatalError("init(coder:) has not been implemented")
+     }
+     
+     private func setupViews() {
+         contentView.addSubview(image)
+         contentView.addSubview(titleLabel)
+         contentView.addSubview(noteLabel)
+     }
+     
+     private func setupConstraints() {
+         NSLayoutConstraint.activate([
+             image.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+             image.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+             
+             
+             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+             titleLabel.leadingAnchor.constraint(equalTo: image.trailingAnchor, constant: 16),
+             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+             
+             noteLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+             noteLabel.leadingAnchor.constraint(equalTo: image.trailingAnchor, constant: 16),
+             noteLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+             noteLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
+         ])
+     }
+
+     func configure(with note: Note) {
+         titleLabel.text = note.title
+         noteLabel.text = note.notes
+         
+     }
+ }
+
+
 
  struct Note: Codable, Identifiable, Equatable {
      

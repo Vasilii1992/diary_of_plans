@@ -43,21 +43,20 @@ class NotePresenter: NotePresenterProtocol {
             }
         }
     }
-    
     func addNote(note: Note) {
-        view?.showLoading()
-        dataRepository.saveData(note: note) { [weak self] result in
-            switch result {
-            case .success():
-                self?.notes = self?.notes.sorted(by: {$0.date > $1.date }) ?? []
-                self?.view?.didInsertRow(at: 0)
-                self?.view?.hideLoading()
-            case .failure(let error):
-                self?.view?.hideLoading()
-                self?.view?.showError(title: "Ошибка", message: error.localizedDescription)
-            }
-        }
-    }
+         view?.showLoading()
+         dataRepository.saveData(note: note) { [weak self] result in
+             switch result {
+             case .success():
+                 self?.notes.insert(note, at: 0)
+                 self?.view?.didInsertRow(at: 0)
+                 self?.view?.hideLoading()
+             case .failure(let error):
+                 self?.view?.hideLoading()
+                 self?.view?.showError(title: "Ошибка", message: error.localizedDescription)
+             }
+         }
+     }
     
     func deleteNote(at index: Int) {
         let note = notes[index]
@@ -98,11 +97,6 @@ class NotePresenter: NotePresenterProtocol {
             case .failure(let error):
                 self?.view?.showError(title: "Ошибка", message: error.localizedDescription)
             }
-            
         }
     }
-    
-    
-    
-    
 }

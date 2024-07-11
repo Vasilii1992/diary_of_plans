@@ -19,31 +19,51 @@ protocol NoteViewProtocol: AnyObject {
 
 class NoteViewController: UIViewController, NoteViewProtocol {
 
-    private var tableView: UITableView!
     private var presenter: NotePresenterProtocol!
+    
+    private lazy var tableView: UITableView = {
+        let tableView = UITableView()
+            tableView.register(NoteTableViewCell.self, forCellReuseIdentifier: NoteTableViewCell.reuseIdentifier)
+
+        return tableView
+    }()
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+        view.backgroundColor = .white
+        title = "Заметки"
+        setupViews()
+        setupConstraints()
+        setupDelegate()
         setupPresenter()
         presenter.loadAndUpdateDisplayData()
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addNoteTapped))
+
     }
     
-    private func setupUI() {
-        view.backgroundColor = .white
-        title = "Notes"
-        
-        // Setup TableView
-        tableView = UITableView(frame: view.bounds)
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "NoteCell")
+    private func setupViews() {
+
         view.addSubview(tableView)
         
-        // Setup Add Button
-        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addNoteTapped))
     }
     
+    func setupDelegate() {
+        tableView.dataSource = self
+        tableView.delegate = self
+    }
+    func setupConstraints() {
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        
+        ])
+    }
+
     private func setupPresenter() {
         let fileHandler = FileHandler()
         let serviceRepository = ServiceRepository(fileHandler: fileHandler)
@@ -51,27 +71,38 @@ class NoteViewController: UIViewController, NoteViewProtocol {
     }
     
     @objc private func addNoteTapped() {
-        let alertController = UIAlertController(title: "New Note", message: "Enter note title", preferredStyle: .alert)
+        let alertController = UIAlertController(title: "Новая Заметка", message: "Запиши свою заметку", preferredStyle: .alert)
+        
+        // Title field
         alertController.addTextField { textField in
-            textField.placeholder = "Note title"
+            textField.placeholder = "Заголовок"
         }
         
-        let addAction = UIAlertAction(title: "Add", style: .default) { [weak self] _ in
-            guard let textField = alertController.textFields?.first, let noteTitle = textField.text, !noteTitle.isEmpty else {
-                self?.showError(title: "Error", message: "Note title cannot be empty")
+        // Content field
+        alertController.addTextField { textField in
+            textField.placeholder = "Заметка..."
+        }
+        
+        let addAction = UIAlertAction(title: "Добавить", style: .default) { [weak self] _ in
+            guard let textFields = alertController.textFields,
+                  let titleField = textFields.first, let noteTitle = titleField.text, !noteTitle.isEmpty,
+                  let contentField = textFields.last, let noteContent = contentField.text, !noteContent.isEmpty else {
+                self?.showError(title: "Error", message: "Both title and note cannot be empty")
                 return
             }
-            let newNote = Note(title: noteTitle, isComplete: false, date: Date(), notes: "")
+            
+            let newNote = Note(title: noteTitle, isComplete: false, date: Date(), notes: noteContent)
             self?.presenter.addNote(note: newNote)
         }
         
-        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancelAction = UIAlertAction(title: "Отмена", style: .cancel, handler: nil)
         
         alertController.addAction(addAction)
         alertController.addAction(cancelAction)
         
         present(alertController, animated: true, completion: nil)
     }
+
 
     // MARK: - NoteViewProtocol Methods
     func showError(title: String, message: String) {
@@ -110,14 +141,16 @@ extension NoteViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return presenter.numberOfNotes()
     }
-    
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "NoteCell", for: indexPath)
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: NoteTableViewCell.reuseIdentifier, for: indexPath) as? NoteTableViewCell else {
+            return UITableViewCell()
+        }
         let note = presenter.noteAt(index: indexPath.row)
-        cell.textLabel?.text = note.title
-        cell.accessoryType = note.isComplete ? .checkmark : .none
+        cell.configure(with: note, imageName: presenter.getImage(for: note.isComplete))
         return cell
     }
+
 }
 
 // MARK: - UITableViewDelegate Methods
