@@ -66,11 +66,10 @@
 		6B53760E2C3FDF27002C8FE2 /* Diary of plans */ = {
 			isa = PBXGroup;
 			children = (
+				6BBA62662C4055E100847490 /* Application */,
 				6B5376232C3FDF6C002C8FE2 /* Model */,
 				6B53762B2C3FF368002C8FE2 /* View */,
 				6B53762C2C3FF37E002C8FE2 /* Presenter */,
-				6B53760F2C3FDF27002C8FE2 /* AppDelegate.swift */,
-				6B5376112C3FDF27002C8FE2 /* SceneDelegate.swift */,
 				6B5376152C3FDF27002C8FE2 /* Main.storyboard */,
 				6B5376182C3FDF28002C8FE2 /* Assets.xcassets */,
 				6B53761A2C3FDF28002C8FE2 /* LaunchScreen.storyboard */,
@@ -104,6 +103,15 @@
 				6B53762D2C400319002C8FE2 /* NotePresenter.swift */,
 			);
 			path = Presenter;
+			sourceTree = "<group>";
+		};
+		6BBA62662C4055E100847490 /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				6B53760F2C3FDF27002C8FE2 /* AppDelegate.swift */,
+				6B5376112C3FDF27002C8FE2 /* SceneDelegate.swift */,
+			);
+			path = Application;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
