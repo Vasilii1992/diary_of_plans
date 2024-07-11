@@ -7,6 +7,18 @@
 
 import UIKit
 
+protocol NoteViewProtocol: AnyObject {
+    func showError(title: String, message: String)
+    func showLoading()
+    func hideLoading()
+    func loadRow(at index: Int)
+    func reloadData()
+    func didInsertRow(at index: Int)
+    func didDeleteRow(at index: Int)
+}
+
+
+
 class NoteViewController: UIViewController {
 
     override func viewDidLoad() {
