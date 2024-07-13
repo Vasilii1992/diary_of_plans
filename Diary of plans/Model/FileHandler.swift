@@ -58,7 +58,9 @@ class FileHandler: FileHandlerProtocol {
         } else {
             return.failure(NoteServiceError.fileWriteError("Не удалось закодировать массив заметок в тип Data"))
         }
-   
+        
+        
+        
     }
     
 }
