@@ -9,7 +9,7 @@ import UIKit
 
 class NoteTableViewCell: UITableViewCell {
     static let reuseIdentifier = "NoteTableViewCell"
-
+    
     
     private let titleLabel: UILabel = {
         let label = UILabel()
@@ -67,7 +67,7 @@ class NoteTableViewCell: UITableViewCell {
             noteLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
         ])
     }
-
+    
     func configure(with note: Note, imageName: String) {
         titleLabel.text = note.title
         noteLabel.text = note.notes

@@ -16,6 +16,7 @@ protocol NotePresenterProtocol {
     func noteAt(index: Int) -> Note
     func getImage(for isComplete: Bool) -> String
     func isToggleNote(for index: Int)
+    func updateNote(_ note: Note, at index: Int)
 }
 
 class NotePresenter: NotePresenterProtocol {
@@ -44,19 +45,19 @@ class NotePresenter: NotePresenterProtocol {
         }
     }
     func addNote(note: Note) {
-         view?.showLoading()
-         dataRepository.saveData(note: note) { [weak self] result in
-             switch result {
-             case .success():
-                 self?.notes.insert(note, at: 0)
-                 self?.view?.didInsertRow(at: 0)
-                 self?.view?.hideLoading()
-             case .failure(let error):
-                 self?.view?.hideLoading()
-                 self?.view?.showError(title: "Ошибка", message: error.localizedDescription)
-             }
-         }
-     }
+        view?.showLoading()
+        dataRepository.saveData(note: note) { [weak self] result in
+            switch result {
+            case .success():
+                self?.notes.insert(note, at: 0)
+                self?.view?.didInsertRow(at: 0)
+                self?.view?.hideLoading()
+            case .failure(let error):
+                self?.view?.hideLoading()
+                self?.view?.showError(title: "Ошибка", message: error.localizedDescription)
+            }
+        }
+    }
     
     func deleteNote(at index: Int) {
         let note = notes[index]
@@ -91,6 +92,18 @@ class NotePresenter: NotePresenterProtocol {
         dataRepository.updateNote(note) { [weak self] result in
             switch result {
                 
+            case .success():
+                self?.notes[index] = note
+                self?.view?.loadRow(at: index)
+            case .failure(let error):
+                self?.view?.showError(title: "Ошибка", message: error.localizedDescription)
+            }
+        }
+    }
+    
+    func updateNote(_ note: Note, at index: Int) {
+        dataRepository.updateNote(note) { [weak self] result in
+            switch result {
             case .success():
                 self?.notes[index] = note
                 self?.view?.loadRow(at: index)

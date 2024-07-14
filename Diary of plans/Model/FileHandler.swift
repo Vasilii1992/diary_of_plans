@@ -17,10 +17,8 @@ protocol FileHandlerProtocol {
     func encodeNotes(_ notes: [Note]) -> Encoderesult 
 }
 
-
-
 class FileHandler: FileHandlerProtocol {
-
+    
     private var url: URL
     
     init() {
@@ -34,7 +32,7 @@ class FileHandler: FileHandlerProtocol {
     
     func fetch(completion: @escaping FetchCompletion) {
         do {
-           let data = try Data(contentsOf: url)
+            let data = try Data(contentsOf: url)
             completion(.success(data))
         } catch {
             completion(.failure(error))
@@ -58,9 +56,5 @@ class FileHandler: FileHandlerProtocol {
         } else {
             return.failure(NoteServiceError.fileWriteError("Не удалось закодировать массив заметок в тип Data"))
         }
-        
-        
-        
     }
-    
 }

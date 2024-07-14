@@ -11,8 +11,6 @@ protocol ServiceRepositoryProtocol {
     typealias FetchNotesCompletion = (Result<[Note], Error>) -> Void
     typealias OperationCompletion  = (Result<Void, Error>) -> Void
     
-    
-    
     func fetchNotes(completion: @escaping FetchNotesCompletion )
     func saveData(note: Note, completion: @escaping OperationCompletion )
     func removeData(note: Note, completion: @escaping OperationCompletion )
@@ -69,7 +67,6 @@ final class ServiceRepository: ServiceRepositoryProtocol {
         case .failure(let error):
             completion(.failure(error))
         }
-        
     }
     
     func removeData(note: Note, completion: @escaping OperationCompletion) {
@@ -91,7 +88,7 @@ final class ServiceRepository: ServiceRepositoryProtocol {
     }
     
     func updateNote(_ noteToUpdate: Note, completion: @escaping OperationCompletion) {
-     
+        
         guard let index = notesCach.firstIndex(where: { noteElement in
             noteElement == noteToUpdate
         }) else {
